@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Visual Chart 50cm</title>
+    <style>
+        body {
+            background-color: #000; /* 实验建议用黑底白字，或改回 #fff */
+            color: #fff;
+            margin: 0;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .row { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; }
+        .label { font-size: 10px; color: #666; margin-bottom: 4px; }
+        .snellen-e {
+            background-color: white; /* E字颜色 */
+            -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
+            mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
+            mask-repeat: no-repeat;
+            -webkit-mask-repeat: no-repeat;
+        }
+        /* 50cm 像素对照表 */
+        .e60 { width: 132px; height: 132px; }
+        .e30 { width: 66px;  height: 66px;  }
+        .e20 { width: 44px;  height: 44px;  }
+        .e15 { width: 33px;  height: 33px;  }
+        .e12 { width: 26px;  height: 26px;  }
+        .e10 { width: 22px;  height: 22px;  }
+        .e75 { width: 16px;  height: 16px;  }
+        .e6  { width: 13px;  height: 13px;  }
+    </style>
+</head>
+<body>
+    <div class="row"><span class="label">6/60</span><div class="snellen-e e60"></div></div>
+    <div class="row"><span class="label">6/30</span><div class="snellen-e e30"></div></div>
+    <div class="row"><span class="label">6/20</span><div class="snellen-e e20"></div></div>
+    <div class="row"><span class="label">6/15</span><div class="snellen-e e15"></div></div>
+    <div class="row"><span class="label">6/12</span><div class="snellen-e e12"></div></div>
+    <div class="row"><span class="label">6/10</span><div class="snellen-e e10"></div></div>
+    <div class="row"><span class="label">6/7.5</span><div class="snellen-e e75"></div></div>
+    <div class="row"><span class="label">6/6</span><div class="snellen-e e6"></div></div>
+</body>
+</html>
