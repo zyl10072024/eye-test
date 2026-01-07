@@ -3,80 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>通用自适配视力表 (50cm)</title>
+    <title>实验室专用适配视力表</title>
     <style>
-        body { background: #fff; margin: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        #setup { padding: 20px; text-align: center; z-index: 100; }
-        .controls { background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        /* 校准尺：手动调整直到它等于 1 厘米 */
-        #calib-box { width: 10mm; height: 10mm; background: #000; margin: 10px auto; }
-        #chart { display: none; flex-direction: column; align-items: center; padding-bottom: 50px; }
-        .row { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
-        .label { font-size: 10px; color: #999; }
+        * { box-sizing: border-box; }
+        body { background: #000; color: #fff; margin: 0; font-family: sans-serif; overflow: hidden; }
+        
+        /* 初始校准界面 */
+        #setup { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #222; z-index: 1000; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .controls { background: #333; padding: 20px; border-radius: 15px; margin-bottom: 30px; width: 90%; max-width: 400px; }
+        #calib-box { width: 10mm; height: 10mm; background: #fff; margin: 20px auto; }
+        
+        /* 视力表全屏容器 */
+        #chart { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center;
+            justify-content: space-between; /* 核心：让第一行和最后一行靠边，中间等距 */
+            padding: 0; /* 距离由 JS 动态计算 */
+        }
+
         .snellen-e {
-            background: #000;
+            background: #fff; /* E字改为白色 */
             -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
             mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
             mask-repeat: no-repeat;
         }
-        button { padding: 10px 20px; background: #007AFF; color: #fff; border: none; border-radius: 5px; }
+
+        button { 
+            padding: 15px 30px; background: #007AFF; color: #fff; 
+            border: none; border-radius: 10px; font-size: 18px; font-weight: bold;
+        }
+        input[type=range] { width: 100%; margin: 20px 0; }
     </style>
 </head>
 <body>
 
 <div id="setup">
-    <h3>第一步：物理校准</h3>
+    <h2>物理尺寸校准</h2>
     <div class="controls">
-        <p>拿一把实物尺子放在屏幕上，调节滑块直到下方黑块的高度**正好等于 1 厘米**。</p>
-        <input type="range" id="ppi-adj" min="50" max="300" value="100" style="width:80%">
+        <p>请拿实物尺子测量，调节滑块直到白块高度为 <b>1 厘米</b></p>
+        <input type="range" id="ppi-adj" min="50" max="400" value="100">
         <div id="calib-box"></div>
-        <p>当前校准系数: <span id="val">1.0</span></p>
     </div>
-    <button onclick="showChart()">完成校准，进入实验</button>
+    <button onclick="launchChart()">进入全屏实验</button>
 </div>
 
-<div id="chart">
-    <button onclick="location.reload()" style="margin-top:20px; background:#666;">重新校准</button>
+<div id="chart" onclick="location.reload()">
     </div>
 
 <script>
-    let scale = 1;
+    let currentScale = 1;
     const ppiSlider = document.getElementById('ppi-adj');
     const calibBox = document.getElementById('calib-box');
-    
-    // 动态调整校准方块
+
     ppiSlider.oninput = function() {
-        scale = this.value / 100;
-        calibBox.style.transform = `scale(${scale})`;
-        document.getElementById('val').innerText = scale.toFixed(2);
+        currentScale = this.value / 100;
+        calibBox.style.transform = `scale(${currentScale})`;
     };
 
-    function showChart() {
+    function launchChart() {
+        // 尝试请求全屏 API
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+        }
+        
         document.getElementById('setup').style.display = 'none';
-        const chart = document.getElementById('chart');
-        chart.style.display = 'flex';
-        renderE(scale);
+        const chartDiv = document.getElementById('chart');
+        chartDiv.style.display = 'flex';
+        
+        renderSnellen(currentScale);
     }
 
-    function renderE(calibrationScale) {
-        const distMm = 500; // 50cm
+    function renderSnellen(scale) {
         const chartDiv = document.getElementById('chart');
-        const snellen = [60, 30, 20, 15, 12, 10, 7.5, 6];
-        
-        // 浏览器默认 1mm 约等于 3.78px
-        const basePxPerMm = 3.7795;
+        const distMm = 500; // 50cm
+        const snellenLevels = [60, 30, 20, 15, 12, 10, 7.5, 6];
+        const basePxPerMm = 3.7795; // 标准换算
 
-        snellen.forEach(denom => {
-            // 物理公式计算高度 (mm)
-            const heightMm = distMm * Math.tan((denom / 6 * 5 / 60) * Math.PI / 180);
-            // 转换为校准后的像素
-            const finalPx = heightMm * basePxPerMm * calibrationScale;
+        // 1. 先计算所有 E 字的总高度
+        let totalEHeight = 0;
+        const eSizes = snellenLevels.map(denom => {
+            const h = distMm * Math.tan((denom / 6 * 5 / 60) * Math.PI / 180) * basePxPerMm * scale;
+            totalEHeight += h;
+            return h;
+        });
 
-            const row = document.createElement('div');
-            row.className = 'row';
-            row.innerHTML = `<span class="label">6/${denom}</span>
-                             <div class="snellen-e" style="width:${finalPx}px; height:${finalPx}px;"></div>`;
-            chartDiv.appendChild(row);
+        // 2. 计算剩余空间并确定间距 (Gap)
+        // 间距数量 = 等级数 + 1 (包括顶部和底部的距离)
+        const screenHeight = window.innerHeight;
+        const remainingSpace = screenHeight - totalEHeight;
+        const gap = remainingSpace / (snellenLevels.length + 1);
+
+        // 3. 设置容器内边距
+        chartDiv.style.paddingTop = `${gap}px`;
+        chartDiv.style.paddingBottom = `${gap}px`;
+
+        // 4. 生成 E 字并应用间距
+        snellenLevels.forEach((denom, index) => {
+            const eSize = eSizes[index];
+            const eWrapper = document.createElement('div');
+            eWrapper.style.height = `${eSize}px`;
+            eWrapper.style.display = 'flex';
+            eWrapper.style.alignItems = 'center';
+            
+            // 如果不是最后一个，设置下边距
+            if (index < snellenLevels.length - 1) {
+                eWrapper.style.marginBottom = `${gap}px`;
+            }
+
+            const eImg = document.createElement('div');
+            eImg.className = 'snellen-e';
+            eImg.style.width = `${eSize}px`;
+            eImg.style.height = `${eSize}px`;
+
+            eWrapper.appendChild(eImg);
+            chartDiv.appendChild(eWrapper);
         });
     }
 </script>
