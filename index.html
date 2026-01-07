@@ -3,48 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Visual Chart 50cm</title>
+    <title>通用自适配视力表 (50cm)</title>
     <style>
-        body {
-            background-color: #000; /* 实验建议用黑底白字，或改回 #fff */
-            color: #fff;
-            margin: 0;
-            padding: 20px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        .row { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; }
-        .label { font-size: 10px; color: #666; margin-bottom: 4px; }
+        body { background: #fff; margin: 0; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        #setup { padding: 20px; text-align: center; z-index: 100; }
+        .controls { background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        /* 校准尺：手动调整直到它等于 1 厘米 */
+        #calib-box { width: 10mm; height: 10mm; background: #000; margin: 10px auto; }
+        #chart { display: none; flex-direction: column; align-items: center; padding-bottom: 50px; }
+        .row { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .label { font-size: 10px; color: #999; }
         .snellen-e {
-            background-color: white; /* E字颜色 */
+            background: #000;
             -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
             mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
             mask-repeat: no-repeat;
-            -webkit-mask-repeat: no-repeat;
         }
-        /* 50cm 像素对照表 */
-        .e60 { width: 132px; height: 132px; }
-        .e30 { width: 66px;  height: 66px;  }
-        .e20 { width: 44px;  height: 44px;  }
-        .e15 { width: 33px;  height: 33px;  }
-        .e12 { width: 26px;  height: 26px;  }
-        .e10 { width: 22px;  height: 22px;  }
-        .e75 { width: 16px;  height: 16px;  }
-        .e6  { width: 13px;  height: 13px;  }
+        button { padding: 10px 20px; background: #007AFF; color: #fff; border: none; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div class="row"><span class="label">6/60</span><div class="snellen-e e60"></div></div>
-    <div class="row"><span class="label">6/30</span><div class="snellen-e e30"></div></div>
-    <div class="row"><span class="label">6/20</span><div class="snellen-e e20"></div></div>
-    <div class="row"><span class="label">6/15</span><div class="snellen-e e15"></div></div>
-    <div class="row"><span class="label">6/12</span><div class="snellen-e e12"></div></div>
-    <div class="row"><span class="label">6/10</span><div class="snellen-e e10"></div></div>
-    <div class="row"><span class="label">6/7.5</span><div class="snellen-e e75"></div></div>
-    <div class="row"><span class="label">6/6</span><div class="snellen-e e6"></div></div>
+
+<div id="setup">
+    <h3>第一步：物理校准</h3>
+    <div class="controls">
+        <p>拿一把实物尺子放在屏幕上，调节滑块直到下方黑块的高度**正好等于 1 厘米**。</p>
+        <input type="range" id="ppi-adj" min="50" max="300" value="100" style="width:80%">
+        <div id="calib-box"></div>
+        <p>当前校准系数: <span id="val">1.0</span></p>
+    </div>
+    <button onclick="showChart()">完成校准，进入实验</button>
+</div>
+
+<div id="chart">
+    <button onclick="location.reload()" style="margin-top:20px; background:#666;">重新校准</button>
+    </div>
+
+<script>
+    let scale = 1;
+    const ppiSlider = document.getElementById('ppi-adj');
+    const calibBox = document.getElementById('calib-box');
+    
+    // 动态调整校准方块
+    ppiSlider.oninput = function() {
+        scale = this.value / 100;
+        calibBox.style.transform = `scale(${scale})`;
+        document.getElementById('val').innerText = scale.toFixed(2);
+    };
+
+    function showChart() {
+        document.getElementById('setup').style.display = 'none';
+        const chart = document.getElementById('chart');
+        chart.style.display = 'flex';
+        renderE(scale);
+    }
+
+    function renderE(calibrationScale) {
+        const distMm = 500; // 50cm
+        const chartDiv = document.getElementById('chart');
+        const snellen = [60, 30, 20, 15, 12, 10, 7.5, 6];
+        
+        // 浏览器默认 1mm 约等于 3.78px
+        const basePxPerMm = 3.7795;
+
+        snellen.forEach(denom => {
+            // 物理公式计算高度 (mm)
+            const heightMm = distMm * Math.tan((denom / 6 * 5 / 60) * Math.PI / 180);
+            // 转换为校准后的像素
+            const finalPx = heightMm * basePxPerMm * calibrationScale;
+
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.innerHTML = `<span class="label">6/${denom}</span>
+                             <div class="snellen-e" style="width:${finalPx}px; height:${finalPx}px;"></div>`;
+            chartDiv.appendChild(row);
+        });
+    }
+</script>
 </body>
 </html>
