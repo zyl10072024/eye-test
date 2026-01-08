@@ -21,7 +21,6 @@
             width: 100px; background: #444; border: 1px solid #666; color: #fff; 
             padding: 5px; border-radius: 5px; text-align: center;
         }
-        .input-group input:focus { border-color: #007AFF; outline: none; }
         
         .pixel-step { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
         button { padding: 12px 24px; background: #007AFF; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
@@ -65,7 +64,9 @@
             <span>E字行间距 (px):</span>
             <input type="number" id="row-gap" value="30">
         </div>
-        <p style="font-size: 12px; color: #888; margin-top: 10px;">视标范围：6/5 至 6/30 (共7级)</p>
+        <p style="font-size: 11px; color: #888; margin-top: 10px;">
+            排列(底->顶)：6/6, 6/10, 6/12, 6/15, 6/20, 6/30, 6/60
+        </p>
     </div>
     <button onclick="launchChart()" style="width:100%; max-width:450px;">进入全屏实验</button>
 </div>
@@ -109,8 +110,8 @@
         const rowGap = parseFloat(rowGapInput.value);
         
         const distMm = 500; 
-        // 7个等级：从 6/5 到 6/30 (从小到大排列)
-        const snellenLevels = [5, 6, 7.5, 10, 12, 15, 30]; 
+        // 严格遵循你指定的7个等级
+        const snellenLevels = [6, 10, 12, 15, 20, 30, 60]; 
 
         chartDiv.style.paddingBottom = `${bottomOffset}px`;
 
