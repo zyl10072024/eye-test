@@ -3,124 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>实验室专用适配视力表</title>
+    <title>精密光学实验视力表</title>
     <style>
         * { box-sizing: border-box; }
-        body { background: #000; color: #fff; margin: 0; font-family: sans-serif; overflow: hidden; }
+        body { background: #000; color: #fff; margin: 0; font-family: -apple-system, sans-serif; overflow: hidden; }
         
-        /* 初始校准界面 */
         #setup { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #222; z-index: 1000; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; padding: 20px;
+            background: #1a1a1a; z-index: 1000; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; padding: 10px; overflow-y: auto;
         }
-        .controls { background: #333; padding: 20px; border-radius: 15px; margin-bottom: 30px; width: 90%; max-width: 400px; }
-        #calib-box { width: 10mm; height: 10mm; background: #fff; margin: 20px auto; }
+        .controls { background: #2c2c2c; padding: 20px; border-radius: 20px; margin-bottom: 20px; width: 100%; max-width: 450px; text-align: center; }
+        #calib-box { width: 10mm; height: 10mm; background: #fff; margin: 15px auto; border: 1px solid #007AFF; }
         
-        /* 视力表全屏容器 */
-        #chart { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            display: none; flex-direction: column; align-items: center;
-            justify-content: space-between; /* 核心：让第一行和最后一行靠边，中间等距 */
-            padding: 0; /* 距离由 JS 动态计算 */
+        .input-group { margin: 10px 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+        .input-group input { 
+            width: 100px; background: #444; border: 1px solid #666; color: #fff; 
+            padding: 5px; border-radius: 5px; text-align: center;
         }
-
+        .input-group input:focus { border-color: #007AFF; outline: none; }
+        
+        .pixel-step { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+        button { padding: 12px 24px; background: #007AFF; color: #fff; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+        button.step-btn { background: #444; padding: 6px 12px; font-size: 12px; }
+        
+        #chart { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            display: none; flex-direction: column-reverse; align-items: center; 
+        }
         .snellen-e {
-            background: #fff; /* E字改为白色 */
+            background: #fff;
             -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
             mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><path d="M0 0h5v1H1v1h3v1H1v1h4v1H0z"/></svg>');
             mask-repeat: no-repeat;
         }
-
-        button { 
-            padding: 15px 30px; background: #007AFF; color: #fff; 
-            border: none; border-radius: 10px; font-size: 18px; font-weight: bold;
-        }
-        input[type=range] { width: 100%; margin: 20px 0; }
     </style>
 </head>
 <body>
 
 <div id="setup">
-    <h2>物理尺寸校准</h2>
     <div class="controls">
-        <p>请拿实物尺子测量，调节滑块直到白块高度为 <b>1 厘米</b></p>
-        <input type="range" id="ppi-adj" min="50" max="400" value="100">
         <div id="calib-box"></div>
+        
+        <div class="input-group">
+            <span>物理比例系数:</span>
+            <input type="number" id="manual-ratio" step="0.0001" value="1.0000">
+        </div>
+
+        <div class="pixel-step">
+            <button class="step-btn" onclick="adjustByPixel(-1)">-1 像素</button>
+            <button class="step-btn" onclick="adjustByPixel(1)">+1 像素</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
+
+        <div class="input-group">
+            <span>底部边距 (px):</span>
+            <input type="number" id="bottom-offset" value="50">
+        </div>
+        <div class="input-group">
+            <span>E字行间距 (px):</span>
+            <input type="number" id="row-gap" value="30">
+        </div>
     </div>
-    <button onclick="launchChart()">进入全屏实验</button>
+    <button onclick="launchChart()" style="width:100%; max-width:450px;">进入全屏实验</button>
 </div>
 
-<div id="chart" onclick="location.reload()">
-    </div>
+<div id="chart" onclick="location.reload()"></div>
 
 <script>
-    let currentScale = 1;
-    const ppiSlider = document.getElementById('ppi-adj');
+    const basePxPerMm = 3.7795275591; 
+    
+    const manualRatio = document.getElementById('manual-ratio');
+    const bottomOffsetInput = document.getElementById('bottom-offset');
+    const rowGapInput = document.getElementById('row-gap');
     const calibBox = document.getElementById('calib-box');
 
-    ppiSlider.oninput = function() {
-        currentScale = this.value / 100;
-        calibBox.style.transform = `scale(${currentScale})`;
+    // 实时更新校准方块预览
+    manualRatio.oninput = () => {
+        calibBox.style.transform = `scale(${manualRatio.value})`;
     };
 
+    function adjustByPixel(direction) {
+        const pixelDelta = 1 / (10 * basePxPerMm);
+        let val = parseFloat(manualRatio.value);
+        val += (direction * pixelDelta);
+        manualRatio.value = val.toFixed(4);
+        calibBox.style.transform = `scale(${val})`;
+    }
+
     function launchChart() {
-        // 尝试请求全屏 API
         if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen();
         }
-        
         document.getElementById('setup').style.display = 'none';
         const chartDiv = document.getElementById('chart');
         chartDiv.style.display = 'flex';
-        
-        renderSnellen(currentScale);
+        renderSnellen();
     }
 
-    function renderSnellen(scale) {
+    function renderSnellen() {
         const chartDiv = document.getElementById('chart');
-        const distMm = 500; // 50cm
-        const snellenLevels = [60, 30, 20, 15, 12, 10, 7.5, 6];
-        const basePxPerMm = 3.7795; // 标准换算
+        const scale = parseFloat(manualRatio.value);
+        const bottomOffset = parseFloat(bottomOffsetInput.value);
+        const rowGap = parseFloat(rowGapInput.value);
+        
+        const distMm = 500; 
+        const snellenLevels = [6, 7.5, 10, 12, 15, 20, 30, 60]; // 从小到大排，方便从底部向上布局
 
-        // 1. 先计算所有 E 字的总高度
-        let totalEHeight = 0;
-        const eSizes = snellenLevels.map(denom => {
-            const h = distMm * Math.tan((denom / 6 * 5 / 60) * Math.PI / 180) * basePxPerMm * scale;
-            totalEHeight += h;
-            return h;
-        });
+        chartDiv.style.paddingBottom = `${bottomOffset}px`;
 
-        // 2. 计算剩余空间并确定间距 (Gap)
-        // 间距数量 = 等级数 + 1 (包括顶部和底部的距离)
-        const screenHeight = window.innerHeight;
-        const remainingSpace = screenHeight - totalEHeight;
-        const gap = remainingSpace / (snellenLevels.length + 1);
-
-        // 3. 设置容器内边距
-        chartDiv.style.paddingTop = `${gap}px`;
-        chartDiv.style.paddingBottom = `${gap}px`;
-
-        // 4. 生成 E 字并应用间距
         snellenLevels.forEach((denom, index) => {
-            const eSize = eSizes[index];
-            const eWrapper = document.createElement('div');
-            eWrapper.style.height = `${eSize}px`;
-            eWrapper.style.display = 'flex';
-            eWrapper.style.alignItems = 'center';
+            const h = distMm * Math.tan((denom / 6 * 5 / 60) * Math.PI / 180) * basePxPerMm * scale;
             
-            // 如果不是最后一个，设置下边距
-            if (index < snellenLevels.length - 1) {
-                eWrapper.style.marginBottom = `${gap}px`;
-            }
-
             const eImg = document.createElement('div');
             eImg.className = 'snellen-e';
-            eImg.style.width = `${eSize}px`;
-            eImg.style.height = `${eSize}px`;
+            eImg.style.width = `${h}px`;
+            eImg.style.height = `${h}px`;
+            eImg.style.flexShrink = "0";
 
-            eWrapper.appendChild(eImg);
-            chartDiv.appendChild(eWrapper);
+            // 如果不是第一个（最底部的那个），添加下边距（即间距）
+            if (index > 0) {
+                eImg.style.marginBottom = `${rowGap}px`;
+            }
+
+            chartDiv.appendChild(eImg);
         });
     }
 </script>
