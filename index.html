@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>精密实验视力表 - 自动保存版</title>
+    <title>精密实验 - 4.5x 视野优化版</title>
     <style>
         * { box-sizing: border-box; }
         body { background: #000; color: #fff; margin: 0; font-family: -apple-system, sans-serif; overflow: hidden; }
@@ -65,7 +65,7 @@
             <input type="number" id="row-gap">
         </div>
         <p style="font-size: 11px; color: #888; margin-top: 10px;">
-            设置已自动保存，刷新后不会丢失
+            视标等级：6/6(下) 至 6/30(上)
         </p>
     </div>
     <button onclick="launchChart()" style="width:100%; max-width:450px;">进入全屏实验</button>
@@ -81,15 +81,14 @@
     const rowGapInput = document.getElementById('row-gap');
     const calibBox = document.getElementById('calib-box');
 
-    // --- 自动加载逻辑 ---
+    // 载入历史记录
     window.onload = () => {
         manualRatio.value = localStorage.getItem('manualRatio') || "1.0000";
-        bottomOffsetInput.value = localStorage.getItem('bottomOffset') || "80";
-        rowGapInput.value = localStorage.getItem('rowGap') || "30";
+        bottomOffsetInput.value = localStorage.getItem('bottomOffset') || "100";
+        rowGapInput.value = localStorage.getItem('rowGap') || "40";
         updateCalibBox();
     };
 
-    // --- 自动保存逻辑 ---
     function saveData() {
         localStorage.setItem('manualRatio', manualRatio.value);
         localStorage.setItem('bottomOffset', bottomOffsetInput.value);
@@ -114,7 +113,7 @@
     }
 
     function launchChart() {
-        saveData(); // 启动前最后保存一次
+        saveData();
         if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen();
         }
@@ -126,13 +125,14 @@
 
     function renderSnellen() {
         const chartDiv = document.getElementById('chart');
-        chartDiv.innerHTML = ''; // 清空之前的内容
+        chartDiv.innerHTML = '';
         const scale = parseFloat(manualRatio.value);
         const bottomOffset = parseFloat(bottomOffsetInput.value);
         const rowGap = parseFloat(rowGapInput.value);
         
         const distMm = 500; 
-        const snellenLevels = [6, 10, 12, 15, 20, 30, 60]; 
+        // 按照你指定的精细梯度：6/6, 6/7.5, 6/10, 6/12, 6/15, 6/20, 6/30
+        const snellenLevels = [6, 7.5, 10, 12, 15, 20, 30]; 
 
         chartDiv.style.paddingBottom = `${bottomOffset}px`;
 
