@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>精密光学实验 - 7级视标版</title>
+    <title>精密实验视力表 - 自动保存版</title>
     <style>
         * { box-sizing: border-box; }
         body { background: #000; color: #fff; margin: 0; font-family: -apple-system, sans-serif; overflow: hidden; }
@@ -46,7 +46,7 @@
         
         <div class="input-group">
             <span>物理比例系数:</span>
-            <input type="number" id="manual-ratio" step="0.0001" value="1.0000">
+            <input type="number" id="manual-ratio" step="0.0001">
         </div>
 
         <div class="pixel-step">
@@ -58,14 +58,14 @@
 
         <div class="input-group">
             <span>底部边距 (px):</span>
-            <input type="number" id="bottom-offset" value="80">
+            <input type="number" id="bottom-offset">
         </div>
         <div class="input-group">
             <span>E字行间距 (px):</span>
-            <input type="number" id="row-gap" value="30">
+            <input type="number" id="row-gap">
         </div>
         <p style="font-size: 11px; color: #888; margin-top: 10px;">
-            排列(底->顶)：6/6, 6/10, 6/12, 6/15, 6/20, 6/30, 6/60
+            设置已自动保存，刷新后不会丢失
         </p>
     </div>
     <button onclick="launchChart()" style="width:100%; max-width:450px;">进入全屏实验</button>
@@ -81,19 +81,40 @@
     const rowGapInput = document.getElementById('row-gap');
     const calibBox = document.getElementById('calib-box');
 
-    manualRatio.oninput = () => {
-        calibBox.style.transform = `scale(${manualRatio.value})`;
+    // --- 自动加载逻辑 ---
+    window.onload = () => {
+        manualRatio.value = localStorage.getItem('manualRatio') || "1.0000";
+        bottomOffsetInput.value = localStorage.getItem('bottomOffset') || "80";
+        rowGapInput.value = localStorage.getItem('rowGap') || "30";
+        updateCalibBox();
     };
+
+    // --- 自动保存逻辑 ---
+    function saveData() {
+        localStorage.setItem('manualRatio', manualRatio.value);
+        localStorage.setItem('bottomOffset', bottomOffsetInput.value);
+        localStorage.setItem('rowGap', rowGapInput.value);
+    }
+
+    function updateCalibBox() {
+        calibBox.style.transform = `scale(${manualRatio.value})`;
+        saveData();
+    }
+
+    manualRatio.oninput = updateCalibBox;
+    bottomOffsetInput.oninput = saveData;
+    rowGapInput.oninput = saveData;
 
     function adjustByPixel(direction) {
         const pixelDelta = 1 / (10 * basePxPerMm);
         let val = parseFloat(manualRatio.value);
         val += (direction * pixelDelta);
         manualRatio.value = val.toFixed(4);
-        calibBox.style.transform = `scale(${val})`;
+        updateCalibBox();
     }
 
     function launchChart() {
+        saveData(); // 启动前最后保存一次
         if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen();
         }
@@ -105,12 +126,12 @@
 
     function renderSnellen() {
         const chartDiv = document.getElementById('chart');
+        chartDiv.innerHTML = ''; // 清空之前的内容
         const scale = parseFloat(manualRatio.value);
         const bottomOffset = parseFloat(bottomOffsetInput.value);
         const rowGap = parseFloat(rowGapInput.value);
         
         const distMm = 500; 
-        // 严格遵循你指定的7个等级
         const snellenLevels = [6, 10, 12, 15, 20, 30, 60]; 
 
         chartDiv.style.paddingBottom = `${bottomOffset}px`;
