@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>精密光学实验视力表</title>
+    <title>4.5x 放大精密实验视力表</title>
     <style>
         * { box-sizing: border-box; }
         body { background: #000; color: #fff; margin: 0; font-family: -apple-system, sans-serif; overflow: hidden; }
@@ -59,12 +59,13 @@
 
         <div class="input-group">
             <span>底部边距 (px):</span>
-            <input type="number" id="bottom-offset" value="50">
+            <input type="number" id="bottom-offset" value="100">
         </div>
         <div class="input-group">
             <span>E字行间距 (px):</span>
-            <input type="number" id="row-gap" value="30">
+            <input type="number" id="row-gap" value="50">
         </div>
+        <p style="font-size: 11px; color: #888; margin-top: 10px;">当前视标: 6/5, 6/6, 6/7.5 (从下往上)</p>
     </div>
     <button onclick="launchChart()" style="width:100%; max-width:450px;">进入全屏实验</button>
 </div>
@@ -79,7 +80,6 @@
     const rowGapInput = document.getElementById('row-gap');
     const calibBox = document.getElementById('calib-box');
 
-    // 实时更新校准方块预览
     manualRatio.oninput = () => {
         calibBox.style.transform = `scale(${manualRatio.value})`;
     };
@@ -109,11 +109,13 @@
         const rowGap = parseFloat(rowGapInput.value);
         
         const distMm = 500; 
-        const snellenLevels = [6, 7.5, 10, 12, 15, 20, 30, 60]; // 从小到大排，方便从底部向上布局
+        // 只取你要的三个等级，从小到大排序
+        const snellenLevels = [5, 6, 7.5]; 
 
         chartDiv.style.paddingBottom = `${bottomOffset}px`;
 
         snellenLevels.forEach((denom, index) => {
+            // 计算高度
             const h = distMm * Math.tan((denom / 6 * 5 / 60) * Math.PI / 180) * basePxPerMm * scale;
             
             const eImg = document.createElement('div');
@@ -122,7 +124,6 @@
             eImg.style.height = `${h}px`;
             eImg.style.flexShrink = "0";
 
-            // 如果不是第一个（最底部的那个），添加下边距（即间距）
             if (index > 0) {
                 eImg.style.marginBottom = `${rowGap}px`;
             }
